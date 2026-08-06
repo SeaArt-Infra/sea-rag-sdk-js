@@ -1,0 +1,21 @@
+{
+  "name": "sea-rag-sdk-js",
+  "version": "0.1.0",
+  "description": "Node.js SDK for SeaArt RAG and RAGFlow APIs.",
+  "type": "module",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18.17"
+  }
+}

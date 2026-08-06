@@ -1,0 +1,4 @@
+interface:
+  display_name: "SeaRAG JavaScript SDK"
+  short_description: "Integrate Node services with SeaArt RAG APIs."
+  default_prompt: "Use $sea-rag-sdk-js to integrate a Node.js service with SeaArt RAG APIs."
