@@ -22,7 +22,7 @@ export class SeaRAGTransport {
     }
     this.endpoint = normalizeRAGEndpoint(endpoint);
     this.apiKey = apiKey;
-    this.headers = { ...(headers ?? {}) };
+    this.headers = withProjectIDHeader(headers, projectIDFromHeaders(headers));
     this.timeoutMs = timeoutMs;
   }
 
@@ -67,8 +67,9 @@ export class SeaRAGTransport {
   }
 
   async postMultipart(path, files, fields = {}, { signal } = {}) {
+    const projectContext = multipartProjectContext(fields, this.headers);
     const form = new FormData();
-    for (const [key, value] of Object.entries(fields)) {
+    for (const [key, value] of Object.entries(projectContext.fields)) {
       form.append(key, String(value));
     }
     for (const file of files) {
@@ -79,7 +80,15 @@ export class SeaRAGTransport {
     }
 
     const url = this.buildURL(path);
-    const response = await this.request("POST", url, form, "application/json", undefined, signal, false);
+    const response = await this.request(
+      "POST",
+      url,
+      form,
+      "application/json",
+      projectContext.headers,
+      signal,
+      false,
+    );
     const text = await response.text();
     if (!response.ok) {
       throw httpError(response.status, text);
@@ -176,8 +185,12 @@ export class SeaRAGTransport {
 
   async request(method, url, body, accept, requestHeaders, signal, serializeJSON, applyTimeout = true) {
     const hasBody = body !== undefined;
-    const headers = this.buildHeaders(accept, hasBody && serializeJSON, requestHeaders);
-    const payload = hasBody && serializeJSON ? JSON.stringify(body) : body;
+    let headers = this.buildHeaders(accept, hasBody && serializeJSON, requestHeaders);
+    let requestBody = body;
+    if (serializeJSON) {
+      ({ body: requestBody, headers } = projectJSONContext(body, headers));
+    }
+    const payload = hasBody && serializeJSON ? JSON.stringify(requestBody) : requestBody;
     if (isDebugEnabled()) {
       console.error(`${method} ${url}`);
     }
@@ -206,6 +219,22 @@ export function normalizeRAGEndpoint(endpoint) {
     url.pathname = `/${segments.join("/")}`;
   }
   return url.toString();
+}
+
+export function withProjectIDHeader(headers, projectId) {
+  const value = typeof projectId === "string" ? projectId.trim() : "";
+  if (!value) {
+    return { ...(headers ?? {}) };
+  }
+
+  const result = {};
+  for (const [key, headerValue] of Object.entries(headers ?? {})) {
+    if (key.toLowerCase() !== "x-project-id") {
+      result[key] = headerValue;
+    }
+  }
+  result["X-Project-ID"] = value;
+  return result;
 }
 
 function uploadBlob(file) {
@@ -254,6 +283,45 @@ function queryValues(value) {
 
 function hasHeader(headers, name) {
   return Object.keys(headers).some((key) => key.toLowerCase() === name.toLowerCase());
+}
+
+function projectJSONContext(body, headers) {
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return { body, headers };
+  }
+
+  const projectId = projectIDFromHeaders(headers) || projectIDFromValue(body.project_id);
+  if (!projectId) {
+    return { body, headers };
+  }
+  return {
+    body: { ...body, project_id: projectId },
+    headers: withProjectIDHeader(headers, projectId),
+  };
+}
+
+function multipartProjectContext(fields, headers) {
+  const projectId = projectIDFromHeaders(headers) || projectIDFromValue(fields?.project_id);
+  if (!projectId) {
+    return { fields: { ...(fields ?? {}) }, headers: undefined };
+  }
+  return {
+    fields: { ...(fields ?? {}), project_id: projectId },
+    headers: withProjectIDHeader({}, projectId),
+  };
+}
+
+function projectIDFromHeaders(headers) {
+  for (const [key, value] of Object.entries(headers ?? {})) {
+    if (key.toLowerCase() === "x-project-id") {
+      return projectIDFromValue(value);
+    }
+  }
+  return "";
+}
+
+function projectIDFromValue(value) {
+  return typeof value === "string" ? value.trim() : "";
 }
 
 function isDebugEnabled() {

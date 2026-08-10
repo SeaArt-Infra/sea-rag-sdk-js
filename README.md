@@ -53,7 +53,7 @@ const result = await client.retrieval.search({
 console.log(result);
 ```
 
-The client sends `Authorization: Bearer <apiKey>` unless `headers` already contains Authorization. This project-scoped RAGFlow deployment requires `X-Project-ID`; use global `headers` for it and other gateway-wide trace or tenancy headers.
+The client sends `Authorization: Bearer <apiKey>` unless `headers` already contains Authorization. This project-scoped RAGFlow deployment requires `headers["X-Project-ID"]`; the SDK mirrors it into `project_id` in JSON and multipart request bodies. Conversely, a JSON or multipart `project_id` sends the same header. The header wins if both differ.
 
 ## Ingest A Document
 
@@ -156,7 +156,7 @@ Use `sea-rag-sdk-js` in Node.js services instead of hand-written RAGFlow HTTP ca
 5. Call `client.documents.waitForParsing()` after starting parsing and before retrieval.
 6. Run `npm test` after changing the integration.
 
-The client adds `Authorization: Bearer <apiKey>` unless global headers supply Authorization. This project-scoped RAGFlow deployment also requires `X-Project-ID`, supplied through `headers`. Do not include `/rag` or `/api/v1` in normal endpoint configuration, and never expose the key to browsers.
+The client adds `Authorization: Bearer <apiKey>` unless global headers supply Authorization. This project-scoped RAGFlow deployment requires `headers["X-Project-ID"]`; the SDK mirrors it into `project_id` in JSON and multipart request bodies. Conversely, a JSON or multipart `project_id` sends the same header. The header wins if both differ. Do not include `/rag` or `/api/v1` in normal endpoint configuration, and never expose the key to browsers.
 
 ## Shortest Runnable Flow
 
