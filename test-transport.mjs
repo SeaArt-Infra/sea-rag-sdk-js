@@ -49,7 +49,11 @@ test("uploads multipart documents through the normalized gateway route", async (
     return jsonResponse({ code: 0, data: [{ id: "doc_1", run: "1" }] });
   };
 
-  const client = new SeaRAGClient({ endpoint: "https://gateway.example", apiKey: "api-key" });
+  const client = new SeaRAGClient({
+    endpoint: "https://gateway.example",
+    apiKey: "api-key",
+    headers: { "X-Project-ID": "project_1" },
+  });
   const result = await client.documents.upload("kb_1", [{ name: "notes.txt", content: "rag content" }]);
 
   assert.ok(result instanceof RAGResponse);
@@ -59,9 +63,44 @@ test("uploads multipart documents through the normalized gateway route", async (
   assert.equal(result.data[0].parsingStatus, "RUNNING");
   assert.equal(captured.url, "https://gateway.example/rag/api/v1/datasets/kb_1/documents");
   assert.equal(captured.options.headers.authorization, "Bearer api-key");
+  assert.equal(captured.options.headers["X-Project-ID"], "project_1");
+  assert.equal(captured.options.body.get("project_id"), "project_1");
   const file = captured.options.body.get("file");
   assert.equal(file.name, "notes.txt");
   assert.equal(await file.text(), "rag content");
+});
+
+test("adds the project id to JSON requests without mutating the caller payload", async () => {
+  let captured;
+  globalThis.fetch = async (url, options) => {
+    captured = { url, options };
+    return jsonResponse({ code: 0, data: { chunks: [] } });
+  };
+
+  const payload = { question: "hello" };
+  const client = new SeaRAGClient({
+    endpoint: "https://gateway.example",
+    headers: { "X-Project-ID": "project_1" },
+  });
+  await client.retrieval.search(payload);
+
+  assert.equal(captured.options.headers["X-Project-ID"], "project_1");
+  assert.equal(JSON.parse(captured.options.body).project_id, "project_1");
+  assert.equal(payload.project_id, undefined);
+});
+
+test("adds the project id header from a JSON payload", async () => {
+  let captured;
+  globalThis.fetch = async (url, options) => {
+    captured = { url, options };
+    return jsonResponse({ code: 0, data: { chunks: [] } });
+  };
+
+  const client = new SeaRAGClient({ endpoint: "https://gateway.example" });
+  await client.retrieval.search({ question: "hello", project_id: "project_1" });
+
+  assert.equal(captured.options.headers["X-Project-ID"], "project_1");
+  assert.equal(JSON.parse(captured.options.body).project_id, "project_1");
 });
 
 test("throws APIError for non-zero RAGFlow response code", async () => {
