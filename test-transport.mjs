@@ -9,6 +9,7 @@ import {
   RAGResponse,
   SeaRAGClient,
   SeaRAGTransport,
+  UploadedFile,
   normalizeRAGEndpoint,
 } from "./src/index.js";
 
@@ -68,6 +69,47 @@ test("uploads multipart documents through the normalized gateway route", async (
   const file = captured.options.body.get("file");
   assert.equal(file.name, "notes.txt");
   assert.equal(await file.text(), "rag content");
+});
+
+test("uploads a URL into a dataset with the web import endpoint", async () => {
+  let captured;
+  globalThis.fetch = async (url, options) => {
+    captured = { url, options };
+    return jsonResponse({ code: 0, data: { id: "doc_1", name: "example.pdf", run: "0" } });
+  };
+
+  const client = new SeaRAGClient({ endpoint: "https://gateway.example" });
+  const result = await client.documents.uploadFromURL(
+    "kb_1",
+    "example-page",
+    "https://example.com/page",
+  );
+
+  assert.ok(result.success);
+  assert.ok(result.data instanceof Document);
+  assert.equal(result.data.id, "doc_1");
+  assert.equal(result.data.parsingStatus, "UNSTART");
+  assert.equal(captured.url, "https://gateway.example/rag/api/v1/datasets/kb_1/documents?type=web");
+  assert.equal(captured.options.body.get("name"), "example-page");
+  assert.equal(captured.options.body.get("url"), "https://example.com/page");
+  assert.equal(captured.options.body.get("file"), null);
+});
+
+test("crawls a URL into an attachment without creating a dataset document", async () => {
+  let captured;
+  globalThis.fetch = async (url, options) => {
+    captured = { url, options };
+    return jsonResponse({ code: 0, data: { id: "file_1", name: "page.pdf", mime_type: "application/pdf" } });
+  };
+
+  const client = new SeaRAGClient({ endpoint: "https://gateway.example" });
+  const result = await client.documents.uploadInfoFromURL("https://example.com/page");
+
+  assert.ok(result.success);
+  assert.ok(result.data instanceof UploadedFile);
+  assert.equal(result.data.id, "file_1");
+  assert.equal(result.data.mimeType, "application/pdf");
+  assert.equal(captured.url, "https://gateway.example/rag/api/v1/documents/upload?url=https%3A%2F%2Fexample.com%2Fpage");
 });
 
 test("adds the project id to JSON requests without mutating the caller payload", async () => {

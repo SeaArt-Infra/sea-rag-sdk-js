@@ -18,5 +18,6 @@ export {
   ParsingTimeoutError,
   RAGResponse,
   RetrievalResult,
+  UploadedFile,
   normalizeParsingStatus,
 } from "./types.js";

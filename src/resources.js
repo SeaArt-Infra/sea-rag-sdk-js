@@ -10,6 +10,7 @@ import {
   ParsingStatus,
   ParsingTimeoutError,
   RetrievalResult,
+  UploadedFile,
   normalizeRAGResponse,
 } from "./types.js";
 
@@ -62,6 +63,23 @@ export class DocumentsResource extends Resource {
       { signal },
     );
     return response(raw, (value) => objectArray(value).map((item) => new Document(item)));
+  }
+
+  async uploadFromURL(datasetId, name, sourceURL, { signal } = {}) {
+    const raw = await this.transport.postMultipart(
+      `${API_PREFIX}/datasets/${pathSegment(datasetId)}/documents`,
+      [],
+      { name, url: sourceURL },
+      { query: { type: "web" }, signal },
+    );
+    return response(raw, (value) => new Document(value));
+  }
+
+  async uploadInfoFromURL(sourceURL, { signal } = {}) {
+    return response(
+      await this.request("POST", "/documents/upload", { query: { url: sourceURL }, signal }),
+      (value) => new UploadedFile(value),
+    );
   }
 
   async list(datasetId, options = {}, { signal } = {}) {

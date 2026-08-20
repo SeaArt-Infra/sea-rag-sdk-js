@@ -58,6 +58,21 @@ export class Document {
   }
 }
 
+export class UploadedFile {
+  constructor(value = {}) {
+    const raw = objectValue(value);
+    Object.assign(this, raw);
+    this.id = textValue(raw.id);
+    this.name = textValue(raw.name);
+    this.size = numberValue(raw.size);
+    this.extension = textValue(raw.extension);
+    this.mimeType = textValue(raw.mime_type ?? raw.mimeType);
+    this.createdBy = textValue(raw.created_by ?? raw.createdBy);
+    this.createdAt = numberValue(raw.created_at ?? raw.createdAt);
+    this.previewUrl = textValue(raw.preview_url ?? raw.previewUrl);
+  }
+}
+
 export class DocumentList {
   constructor(value = {}) {
     const raw = objectValue(value);
