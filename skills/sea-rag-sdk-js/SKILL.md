@@ -65,6 +65,12 @@ console.log(`retrieved ${result.data.chunks.length} chunks`);
 
 `waitForParsing()` polls every second by default for up to 15 minutes. It returns a typed `Document` on `DONE`, invokes `onProgress` for every observed document state, rejects with `ParsingFailedError` for `CANCEL` or `FAIL`, and rejects with `ParsingTimeoutError` on timeout. RAGFlow state is normalized to `UNSTART`, `RUNNING`, `CANCEL`, `DONE`, or `FAIL`.
 
+## URL Ingestion
+
+Use `client.documents.uploadFromURL(datasetId, name, sourceURL)` to crawl an HTTP(S) web page into a dataset. It returns an unstarted `Document`; call `client.documents.parse()` or `client.chunks.startParsing()`, then `waitForParsing()` before retrieval.
+
+Use `client.documents.uploadInfoFromURL(sourceURL)` only when an attachment is needed. It does not create a dataset document or index content. RAGFlow does not automatically return the original source URL during retrieval; store it as document metadata when references need it.
+
 ## Other Resources
 
 Use `client.documents.parse()` and `stop()` for newer document parse endpoints. Use `client.chunks.cancelParsing()` to cancel compatible parsing and its chunk CRUD helpers for curation. Use `client.chat.complete()` or `stream()` for configured chat assistants, and `client.raw.request(method, "/api/v1/...", { query, body })` for an uncovered RAGFlow API.

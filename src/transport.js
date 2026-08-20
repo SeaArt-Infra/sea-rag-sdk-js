@@ -66,7 +66,7 @@ export class SeaRAGTransport {
     return value;
   }
 
-  async postMultipart(path, files, fields = {}, { signal } = {}) {
+  async postMultipart(path, files, fields = {}, { query, signal } = {}) {
     const projectContext = multipartProjectContext(fields, this.headers);
     const form = new FormData();
     for (const [key, value] of Object.entries(projectContext.fields)) {
@@ -79,7 +79,7 @@ export class SeaRAGTransport {
       form.append("file", uploadBlob(file), file.name);
     }
 
-    const url = this.buildURL(path);
+    const url = this.buildURL(path, query);
     const response = await this.request(
       "POST",
       url,

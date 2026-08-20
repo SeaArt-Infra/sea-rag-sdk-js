@@ -7,7 +7,7 @@ ESM SDK for SeaArt RAG. It wraps RAGFlow REST APIs for Node.js services through 
 | Client resource | Function |
 | --- | --- |
 | `client.datasets` | Create, list, get, update, and delete datasets |
-| `client.documents` | Upload, list, update, parse, stop, delete, and download documents |
+| `client.documents` | Upload files or URLs; list, update, parse, stop, delete, and download documents |
 | `client.chunks` | Start or cancel parsing and manage chunks |
 | `client.retrieval` | Retrieve grounded chunks from datasets |
 | `client.chat` | Manage chat assistants and run JSON or streaming completions |
@@ -83,6 +83,22 @@ await client.documents.waitForParsing(datasetId, documentId);
 Use `client.documents.parse()` and `client.documents.stop()` for newer document parse endpoints. Use `client.chunks.startParsing()` and `client.chunks.cancelParsing()` for compatible chunk parse routes.
 
 Parsing is asynchronous. Call `client.documents.waitForParsing()` before retrieval; it polls every second by default and waits for up to 15 minutes. It returns a typed `Document` on `DONE`, rejects with `ParsingFailedError` on `CANCEL` or `FAIL`, and rejects with `ParsingTimeoutError` on timeout. `onProgress` receives every observed document state.
+
+## Ingest From URL
+
+Use `documents.uploadFromURL()` to crawl one HTTP(S) web page into a dataset. It creates a PDF-backed document with an unstarted parse job, so parse it and wait for completion before retrieval.
+
+```js
+const uploaded = await client.documents.uploadFromURL(
+  datasetId,
+  "example-page",
+  "https://example.com/page",
+);
+await client.documents.parse(datasetId, [uploaded.data.id]);
+await client.documents.waitForParsing(datasetId, uploaded.data.id);
+```
+
+`client.documents.uploadInfoFromURL(sourceURL)` calls `/api/v1/documents/upload?url=...` and returns an `UploadedFile` attachment only. It does not create a dataset document or trigger parsing. RAGFlow does not automatically persist the source URL for retrieval; set document metadata such as `{"url": "https://example.com/page"}` when the source URL must be returned with references.
 
 ## Retrieve And Curate Chunks
 
@@ -204,6 +220,12 @@ console.log(`retrieved ${result.data.chunks.length} chunks`);
 ```
 
 `waitForParsing()` polls every second by default for up to 15 minutes. It returns a typed `Document` on `DONE`, invokes `onProgress` for every observed document state, rejects with `ParsingFailedError` for `CANCEL` or `FAIL`, and rejects with `ParsingTimeoutError` on timeout. RAGFlow state is normalized to `UNSTART`, `RUNNING`, `CANCEL`, `DONE`, or `FAIL`.
+
+## URL Ingestion
+
+Use `client.documents.uploadFromURL(datasetId, name, sourceURL)` to crawl an HTTP(S) web page into a dataset. It returns an unstarted `Document`; call `client.documents.parse()` or `client.chunks.startParsing()`, then `waitForParsing()` before retrieval.
+
+Use `client.documents.uploadInfoFromURL(sourceURL)` only when an attachment is needed. It does not create a dataset document or index content. RAGFlow does not automatically return the original source URL during retrieval; store it as document metadata when references need it.
 
 ## Other Resources
 

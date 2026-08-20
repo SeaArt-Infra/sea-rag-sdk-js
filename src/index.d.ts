@@ -50,6 +50,17 @@ export class Document {
   readonly parsingStatus: string;
 }
 
+export class UploadedFile {
+  id: string;
+  name: string;
+  size: number;
+  extension: string;
+  mimeType: string;
+  createdBy: string;
+  createdAt: number;
+  previewUrl: string;
+}
+
 export class DocumentList {
   total: number;
   docs: Document[];
@@ -136,6 +147,8 @@ export class DatasetsResource {
 
 export class DocumentsResource {
   upload(datasetId: string, files: UploadFile[], options?: { fields?: Record<string, string>; signal?: AbortSignal }): Promise<RAGResponse<Document[]>>;
+  uploadFromURL(datasetId: string, name: string, sourceURL: string, options?: { signal?: AbortSignal }): Promise<RAGResponse<Document>>;
+  uploadInfoFromURL(sourceURL: string, options?: { signal?: AbortSignal }): Promise<RAGResponse<UploadedFile>>;
   list(datasetId: string, options?: Record<string, unknown>): Promise<RAGResponse<DocumentList>>;
   update(datasetId: string, documentId: string, payload: Record<string, unknown>): Promise<RAGResponse<Document>>;
   delete(datasetId: string, ids?: string[], options?: { deleteAll?: boolean }): Promise<RAGResponse<unknown>>;
